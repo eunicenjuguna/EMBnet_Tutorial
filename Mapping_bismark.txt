@@ -1,0 +1,51 @@
+#The first step for any mapping procedure is to generate the index fro the fast read mapper. To reduce the time for the mapping we restrict the mapping to fraction of Chromosome 1 of cassava (from 500'000 to 3'000'000, chromosome01_red.fasta).
+
+#All our analysis will be will be executed in home. Log in with your uesrname and password
+
+ssh <username>@35.180.11.120 (password: <username>)
+
+#within this directory we create a directory for the index:
+
+mkdir Bismark_Cass01_index
+
+#From the data repository we copy the reference sequence of chromosome1:
+
+cp /data/reference/chromosome01_red.fasta Bismark_Cass01_index
+
+#Now we can run the indexing, the indexing algorithm expects to have the reference sequence in the directory we assign for the index:
+
+bismark_genome_preparation Bismark_Cass01_index/
+
+#For the reason of very limited time we will skip the step of quality control and sequence cleaning but we emphasise that this is an important step to achieve good methylation profiling data.
+
+#To keep the results organised we propose to create a directory for each mapping output:
+
+mkdir mapping #as a general directory
+
+mkdir mapping/117CleanL1 #for the output of the first replicate
+
+mkdir mapping/117CleanL2 #for the output of the second replicate
+
+mkdir mapping/117CleanL3 #for the output of the third replicate
+
+#As soon as we have the mapping index we can start with the mapping using bismark:
+
+bismark -q --multicore 4 -o mapping/117CleanL1 Bismark_Cass01_index/ -1 /data/117Clean/117CleanL1_red_1.fq.gz -2 /data/117Clean/117CleanL1_red_2.fq.gz
+#REPEAT the mappinf for seq 2 and 3 and redirect them in the correct destination 
+#repeat for the virus sequences 1, 2 and 3
+#Run the mapping also for the other two data sets CleanL2 and CleanL3.
+
+#Then we need to run the 3 replicates for the virus infected samples. Create again the directories for the results: 117VirusL1, 117VirusL3, 117VirusL4.
+
+#Run the 3 mapping procedure as above.
+
+#The next step is to remove eventual read duplications which frequently are produced during the library preparation.
+
+deduplicate_bismark -p  --output_dir mapping/117CleanL1/ mapping/117CleanL1/117CleanL1_red_1_bismark_bt2_pe.bam
+
+#METHYLATION CALLING
+
+bismark_methylation_extractor -p --multicore 8 --comprehensive --bedGraph --cytosine_report --CX -o mapping/117CleanL1/ --no_overlap --genome_folder /work/boss/Bismark_Cass01_index/ --buffer_size 20% --counts mapping/117CleanL1/117CleanL1_red_1_bismark_bt2_pe.deduplicated.bam 2>&1 | tee mapping/117CleanL1/117CleanL1_red_1_bismark_bt2_pe.deduplicated.log
+
+
+#perform expression analysis in R usin methylkit tool/package
